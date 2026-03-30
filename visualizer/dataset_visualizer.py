@@ -63,9 +63,14 @@ class DatasetVisualizer:
         with open(self.scene_graph_path, 'r') as f:
             self.scene_graph = json.load(f)
         
-        # Referential Statements
-        with open(self.language_path, 'r') as f:
-            self.language_queries = json.load(f)
+        # Referential Statements are optional for graph-only inspection.
+        if os.path.exists(self.language_path):
+            with open(self.language_path, 'r') as f:
+                self.language_queries = json.load(f)
+            self.has_language_queries = True
+        else:
+            self.language_queries = {"regions": {}}
+            self.has_language_queries = False
         
         self.object_df = pd.read_csv(self.object_csv_path)
         self.region_df = pd.read_csv(self.region_csv_path)
@@ -180,7 +185,7 @@ class DatasetVisualizer:
 
         self.cur_object_type = self.objects[self.cur_target_idx]['nyu_label'] if self.cur_target_idx != "-1" else None
 
-        self.statements = self.language_queries['regions'][str(self.cur_region_idx)]
+        self.statements = self.language_queries.get('regions', {}).get(str(self.cur_region_idx), {})
         
 
     def create_window(self):
@@ -296,7 +301,7 @@ class DatasetVisualizer:
             0,
             gui.Margins(0.5 * self.em, 0.5 * self.em, 0.5 * self.em, 0.5 * self.em))
         self.language_vert = gui.CollapsableVert(
-            'Language Queries', 
+            'Language Queries' if self.has_language_queries else 'Language Queries (Unavailable)', 
             0,
             gui.Margins(0.5 * self.em, 0.5 * self.em, 0.5 * self.em, 0.5 * self.em))
 
@@ -310,7 +315,7 @@ class DatasetVisualizer:
         self.object_type_selector.set_items([' '*20])
         self.object_instance_selector.set_items([' '*20])
         self.relationship_selector.set_items(self.relationship_types)
-        self.language_selector.set_items([' '*70])
+        self.language_selector.set_items([' '*70] if self.has_language_queries else ['No referential statements'])
 
         self.region_selector.selected_index = self.cur_region_idx
         self.draw_region()
@@ -404,6 +409,12 @@ class DatasetVisualizer:
     def set_language_queries(self):
         if self.cur_region_idx == -1:
             return
+        if not self.has_language_queries:
+            self.language_selector.set_items(['No referential statements'])
+            self.language_selector.selected_index = -1
+            self.window.set_needs_layout()
+            return
+
         filtered_statements = []
         for statement, instances in self.statements.items():
             if statement=="region":
@@ -419,6 +430,8 @@ class DatasetVisualizer:
 
 
     def select_language_query(self, new_val, is_dbl_click):
+        if not self.has_language_queries:
+            return
         instances = self.statements[new_val.strip()]
         relation_type = instances[0]['relation_type']
         new_relation = instances[0]['relation']

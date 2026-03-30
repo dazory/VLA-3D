@@ -245,8 +245,8 @@ def sample_semantic_pointcloud_from_uv_mesh(
         semantic_point_material_ids = semantic_material_ids[point_triangle_indices]
         semantic_point_colors = semantic_textures[
             semantic_point_material_ids,
-            torch.round(semantic_textures.shape[1] * point_uvs_list[1][:, 1]).int(),
-            torch.round(semantic_textures.shape[2] * point_uvs_list[1][:, 0]).int(),
+            torch.clip(torch.round(semantic_textures.shape[1] * point_uvs_list[1][:, 1]).int(), 0, semantic_textures.shape[1]-1),
+            torch.clip(torch.round(semantic_textures.shape[2] * point_uvs_list[1][:, 0]).int(), 0, semantic_textures.shape[2]-1),
             :
             ]
 
